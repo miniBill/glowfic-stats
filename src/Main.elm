@@ -5,6 +5,7 @@ import BackendTask.Do as Do
 import FatalError exposing (FatalError)
 import Json.Decode
 import Pages.Script as Script exposing (Script)
+import Url.Builder
 import Utils
 
 
@@ -28,5 +29,23 @@ templateDecoder =
 
 task : BackendTask FatalError ()
 task =
-    Do.do (Utils.getAllPages "templates" templateDecoder) <| \_ ->
-    Script.log "Done"
+    Do.do (Utils.getAllPages "templates" [] templateDecoder) <| \templates ->
+    Do.each templates getCharactersCount <| \counts ->
+    let
+        sliced =
+            counts
+                |> List.sortBy (\( _, count ) -> -count)
+                |> List.take 3
+
+        msg =
+            sliced
+                |> List.map (\( name, count ) -> "\n  " ++ name ++ ": " ++ String.fromInt count)
+                |> String.concat
+    in
+    Script.log ("Done:" ++ msg)
+
+
+getCharactersCount : Template -> BackendTask FatalError ( String, Int )
+getCharactersCount template =
+    Utils.getAllPages "characters" [ Url.Builder.int "template_id" template.id ] Json.Decode.value
+        |> BackendTask.map (\characters -> ( template.name, List.length characters ))
