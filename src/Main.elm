@@ -2,10 +2,13 @@ module Main exposing (run)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
+import Dict
+import Dict.Extra
 import FatalError exposing (FatalError)
 import Json.Decode
 import Pages.Script as Script exposing (Script)
 import Pages.Script.Spinner as Spinner
+import Triple.Extra
 import Url.Builder
 import Utils
 
@@ -89,16 +92,16 @@ task =
                                 ( Spinner.Fail, Nothing )
 
                             Ok characters ->
-                                ( Spinner.Succeed, Just ("Got " ++ String.fromInt (characters |> List.map Tuple.second |> List.sum) ++ " characters") )
+                                ( Spinner.Succeed, Just ("Got " ++ String.fromInt (characters |> List.map Triple.Extra.third |> List.sum) ++ " characters") )
                     )
             )
             (\pairs ->
                 pairs
                     |> List.sortBy (\( user, template ) -> ( user.id, template.id ))
                     |> List.map
-                        (\(( user, template ) as pair) ->
+                        (\( user, template ) ->
                             Do.do (getCharactersCount user template) <| \count ->
-                            BackendTask.succeed ( pair, count )
+                            BackendTask.succeed ( user, template, count )
                         )
                     |> BackendTask.sequence
             )
@@ -106,17 +109,50 @@ task =
         |> BackendTask.andThen
             (\result ->
                 let
-                    sliced : List ( ( User, Template ), Int )
+                    sliced : List ( User, Template, Int )
                     sliced =
                         result
-                            |> List.sortBy (\( _, count ) -> -count)
-                            |> List.take 10
+                            |> Dict.Extra.groupBy
+                                (\( user, template, _ ) ->
+                                    if user.username == "Anya" && (String.startsWith "β " template.name || String.startsWith "γ " template.name) then
+                                        ( user.id, String.left 2 template.name )
+
+                                    else
+                                        ( user.id, String.fromInt template.id )
+                                )
+                            |> Dict.values
+                            |> List.filterMap
+                                (\list ->
+                                    case list of
+                                        [] ->
+                                            Nothing
+
+                                        ( user, _, _ ) :: _ ->
+                                            ( user
+                                            , { id =
+                                                    list
+                                                        |> List.map (\( _, { id }, _ ) -> id)
+                                                        |> List.minimum
+                                                        |> Maybe.withDefault -1
+                                              , name =
+                                                    list
+                                                        |> List.map (\( _, { name }, _ ) -> name)
+                                                        |> String.join ", "
+                                              }
+                                            , list
+                                                |> List.map (\( _, _, count ) -> count)
+                                                |> List.sum
+                                            )
+                                                |> Just
+                                )
+                            |> List.sortBy (\( _, _, count ) -> -count)
+                            |> List.take 100
 
                     msg : String
                     msg =
                         sliced
                             |> List.map
-                                (\( ( user, template ), count ) ->
+                                (\( user, template, count ) ->
                                     "\n  "
                                         ++ user.username
                                         ++ " => "
