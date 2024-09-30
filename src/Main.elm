@@ -81,7 +81,7 @@ task =
                     |> BackendTask.map List.concat
             )
         |> Spinner.withStepWithOptions
-            (Spinner.options "Getting templates' characters"
+            (Spinner.options "Getting characters"
                 |> Spinner.withOnCompletion
                     (\res ->
                         case res of
@@ -89,7 +89,7 @@ task =
                                 ( Spinner.Fail, Nothing )
 
                             Ok characters ->
-                                ( Spinner.Succeed, Just ("Got " ++ String.fromInt (List.length characters) ++ " templates' characters") )
+                                ( Spinner.Succeed, Just ("Got " ++ String.fromInt (characters |> List.map Tuple.second |> List.sum) ++ " characters") )
                     )
             )
             (\pairs ->
