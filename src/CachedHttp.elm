@@ -23,7 +23,7 @@ getJson url decoder =
         |> BackendTask.onError
             (\_ ->
                 Do.allowFatal (Http.get url Http.expectString) <| \raw ->
-                Do.do (Script.sleep 300) <| \_ ->
+                Do.do (Script.sleep 200) <| \_ ->
                 Do.allowFatal (Script.writeFile { path = filename, body = raw }) <| \_ ->
                 BackendTask.allowFatal (File.jsonFile decoder filename)
             )
