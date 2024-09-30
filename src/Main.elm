@@ -44,8 +44,31 @@ userDecoder =
 task : BackendTask FatalError ()
 task =
     Spinner.steps
-        |> Spinner.withStep "Getting users" (\_ -> Utils.getAllPages "users" [] userDecoder)
-        |> Spinner.withStep "Getting templates"
+        |> Spinner.withStepWithOptions
+            (Spinner.options "Getting users"
+                |> Spinner.withOnCompletion
+                    (\res ->
+                        case res of
+                            Err _ ->
+                                ( Spinner.Fail, Nothing )
+
+                            Ok users ->
+                                ( Spinner.Succeed, Just ("Got " ++ String.fromInt (List.length users) ++ " users") )
+                    )
+            )
+            (\_ -> Utils.getAllPages "users" [] userDecoder)
+        |> Spinner.withStepWithOptions
+            (Spinner.options "Getting templates"
+                |> Spinner.withOnCompletion
+                    (\res ->
+                        case res of
+                            Err _ ->
+                                ( Spinner.Fail, Nothing )
+
+                            Ok templates ->
+                                ( Spinner.Succeed, Just ("Got " ++ String.fromInt (List.length templates) ++ " templates") )
+                    )
+            )
             (\users ->
                 users
                     |> List.sortBy .id
@@ -57,7 +80,18 @@ task =
                     |> BackendTask.sequence
                     |> BackendTask.map List.concat
             )
-        |> Spinner.withStep "Getting characters"
+        |> Spinner.withStepWithOptions
+            (Spinner.options "Getting templates' characters"
+                |> Spinner.withOnCompletion
+                    (\res ->
+                        case res of
+                            Err _ ->
+                                ( Spinner.Fail, Nothing )
+
+                            Ok characters ->
+                                ( Spinner.Succeed, Just ("Got " ++ String.fromInt (List.length characters) ++ " templates' characters") )
+                    )
+            )
             (\pairs ->
                 pairs
                     |> List.sortBy (\( user, template ) -> ( user.id, template.id ))
