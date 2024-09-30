@@ -30,7 +30,7 @@ templateDecoder =
 task : BackendTask FatalError ()
 task =
     Do.do (Utils.getAllPages "templates" [] templateDecoder) <| \templates ->
-    Do.each templates getCharactersCount <| \counts ->
+    Do.each (List.indexedMap Tuple.pair templates) (getCharactersCount (List.length templates)) <| \counts ->
     let
         sliced =
             counts
@@ -45,7 +45,9 @@ task =
     Script.log ("Done:" ++ msg)
 
 
-getCharactersCount : Template -> BackendTask FatalError ( String, Int )
-getCharactersCount template =
+getCharactersCount : Int -> ( Int, Template ) -> BackendTask FatalError ( String, Int )
+getCharactersCount count ( index, template ) =
+    Do.log (String.fromInt ((index + 1) * 100 // count) ++ "% - " ++ template.name) <| \_ ->
     Utils.getAllPages "characters" [ Url.Builder.int "template_id" template.id ] Json.Decode.value
+        |> BackendTask.quiet
         |> BackendTask.map (\characters -> ( template.name, List.length characters ))
