@@ -103,5 +103,4 @@ getCharactersCount user template =
         , Url.Builder.int "template_id" template.id
         ]
         Json.Decode.value
-        |> BackendTask.quiet
         |> BackendTask.map List.length
