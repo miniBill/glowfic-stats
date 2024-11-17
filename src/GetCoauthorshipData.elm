@@ -75,7 +75,7 @@ task =
     Spinner.steps
         |> Spinner.withStepWithOptions
             (spinnerWithLabel "posts")
-            (\_ -> Utils.getAllPages "posts" [] postDecoder)
+            (\_ -> Utils.getAllPages [ "posts" ] [] postDecoder)
         |> Spinner.withStepWithOptions
             (spinnerWithLabel "posts' details")
             (\posts ->
@@ -84,7 +84,7 @@ task =
                     |> List.map
                         (\post ->
                             CachedHttp.getJson
-                                (Utils.toUrl ("posts/" ++ String.fromInt post.id) [])
+                                (Utils.toUrl [ "posts", String.fromInt post.id ] [])
                                 postDetailsDecoder
                         )
                     |> BackendTask.sequence

@@ -12,13 +12,13 @@ import Url
 import Url.Builder
 
 
-getAllPages : String -> List Url.Builder.QueryParameter -> Decoder a -> BackendTask FatalError (List a)
+getAllPages : List String -> List Url.Builder.QueryParameter -> Decoder a -> BackendTask FatalError (List a)
 getAllPages api params decoder =
     getLastPageIndex api params
         |> BackendTask.andThen (getAllPagesWithLast api params decoder)
 
 
-getLastPageIndex : String -> List Url.Builder.QueryParameter -> BackendTask FatalError (Maybe Int)
+getLastPageIndex : List String -> List Url.Builder.QueryParameter -> BackendTask FatalError (Maybe Int)
 getLastPageIndex api params =
     let
         url : String
@@ -47,10 +47,10 @@ getLastPageIndex api params =
             )
 
 
-toUrl : String -> List Url.Builder.QueryParameter -> String
+toUrl : List String -> List Url.Builder.QueryParameter -> String
 toUrl api params =
     Url.Builder.crossOrigin "https://glowfic.com"
-        [ "api", "v1", api ]
+        ([ "api", "v1" ] ++ api)
         params
 
 
@@ -125,7 +125,7 @@ extractLastPageFromHeaders headers =
                     Err "Ambiguous link to the last page"
 
 
-getAllPagesWithLast : String -> List Url.Builder.QueryParameter -> Decoder a -> Maybe Int -> BackendTask FatalError (List a)
+getAllPagesWithLast : List String -> List Url.Builder.QueryParameter -> Decoder a -> Maybe Int -> BackendTask FatalError (List a)
 getAllPagesWithLast api params decoder maybeLastPage =
     case maybeLastPage of
         Nothing ->

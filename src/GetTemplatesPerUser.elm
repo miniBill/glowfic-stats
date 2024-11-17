@@ -59,7 +59,7 @@ task =
                                 ( Spinner.Succeed, Just ("Got " ++ String.fromInt (List.length users) ++ " users") )
                     )
             )
-            (\_ -> Utils.getAllPages "users" [] userDecoder)
+            (\_ -> Utils.getAllPages [ "users" ] [] userDecoder)
         |> Spinner.withStepWithOptions
             (Spinner.options "Getting templates"
                 |> Spinner.withOnCompletion
@@ -77,7 +77,7 @@ task =
                     |> List.sortBy .id
                     |> List.map
                         (\user ->
-                            Do.do (Utils.getAllPages "templates" [ Url.Builder.int "user_id" user.id ] templateDecoder) <| \templates ->
+                            Do.do (Utils.getAllPages [ "templates" ] [ Url.Builder.int "user_id" user.id ] templateDecoder) <| \templates ->
                             BackendTask.succeed (List.map (Tuple.pair user) templates)
                         )
                     |> BackendTask.sequence
@@ -168,7 +168,7 @@ task =
 
 getCharactersCount : User -> Template -> BackendTask FatalError Int
 getCharactersCount user template =
-    Utils.getAllPages "characters"
+    Utils.getAllPages [ "characters" ]
         [ Url.Builder.int "user_id" user.id
         , Url.Builder.int "template_id" template.id
         ]
