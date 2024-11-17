@@ -1,4 +1,4 @@
-module Utils exposing (getAllPages)
+module Utils exposing (getAllPages, toUrl)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do

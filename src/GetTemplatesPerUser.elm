@@ -1,4 +1,4 @@
-module Main exposing (run)
+module GetTemplatesPerUser exposing (run)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
