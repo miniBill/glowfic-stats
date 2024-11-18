@@ -5,8 +5,10 @@ import Dict
 import Element exposing (Element, column, height, padding, paragraph, px, shrink, spacing, text, textColumn, wrappedRow)
 import Element.Border as Border
 import Element.Input as Input
+import File.Download
 import GetCoauthorshipData exposing (PostDetails)
 import Graph exposing (Edge, Graph, Node)
+import Graph.DOT
 import Http
 import Json.Decode
 import List.Extra
@@ -27,6 +29,7 @@ type Msg
     | GotData (Result Http.Error (List GetCoauthorshipData.PostDetails))
     | CalculateShortestPath
     | CalculateAllPathsFromAlicorn
+    | GenerateDOTfile
 
 
 main : Program () Model Msg
@@ -88,6 +91,13 @@ view maybeModel =
                         { onPress = Just CalculateAllPathsFromAlicorn
                         , label = text "Calculate all paths from Alicorn"
                         }
+                    , Input.button
+                        [ padding 8
+                        , Border.width 1
+                        ]
+                        { onPress = Just GenerateDOTfile
+                        , label = text "Generate .dot file"
+                        }
                     ]
                 , case model.result of
                     Nothing ->
@@ -113,11 +123,11 @@ view maybeModel =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg maybeModel =
-    case msg of
-        GotData (Err _) ->
+    case ( msg, maybeModel ) of
+        ( GotData (Err _), _ ) ->
             ( maybeModel, Cmd.none )
 
-        GotData (Ok posts) ->
+        ( GotData (Ok posts), _ ) ->
             let
                 ( authors, links ) =
                     List.foldl
@@ -180,139 +190,137 @@ update msg maybeModel =
             , Cmd.none
             )
 
-        First first ->
-            case maybeModel of
-                Nothing ->
-                    ( Nothing, Cmd.none )
+        ( _, Nothing ) ->
+            ( Nothing, Cmd.none )
 
-                Just model ->
-                    ( Just { model | first = first }, Cmd.none )
+        ( First first, Just model ) ->
+            ( Just { model | first = first }, Cmd.none )
 
-        Second second ->
-            case maybeModel of
-                Nothing ->
-                    ( Nothing, Cmd.none )
+        ( Second second, Just model ) ->
+            ( Just { model | second = second }, Cmd.none )
 
-                Just model ->
-                    ( Just { model | second = second }, Cmd.none )
+        ( CalculateShortestPath, Just model ) ->
+            let
+                from : List Graph.NodeId
+                from =
+                    Graph.nodes model.graph
+                        |> List.filterMap
+                            (\node ->
+                                if String.toLower node.label == String.toLower model.first then
+                                    Just node.id
 
-        CalculateShortestPath ->
-            case maybeModel of
-                Nothing ->
-                    ( Nothing, Cmd.none )
-
-                Just model ->
-                    let
-                        from : List Graph.NodeId
-                        from =
-                            Graph.nodes model.graph
-                                |> List.filterMap
-                                    (\node ->
-                                        if String.toLower node.label == String.toLower model.first then
-                                            Just node.id
-
-                                        else
-                                            Nothing
-                                    )
-
-                        visitor contextes {- distance -} _ acc =
-                            case contextes of
-                                [] ->
-                                    acc
-
-                                last :: _ ->
-                                    if
-                                        String.toLower last.node.label
-                                            == String.toLower
-                                                (if String.isEmpty model.second then
-                                                    "Alicorn"
-
-                                                 else
-                                                    model.second
-                                                )
-                                    then
-                                        contextes
-                                            |> List.map (\{ node } -> node.label)
-                                            |> List.reverse
-                                            |> String.join " -> "
-                                            |> Just
-
-                                    else
-                                        acc
-                    in
-                    ( Just
-                        { model
-                            | result =
-                                Graph.guidedBfs
-                                    Graph.alongOutgoingEdges
-                                    visitor
-                                    from
+                                else
                                     Nothing
-                                    model.graph
-                                    |> Tuple.first
-                        }
-                    , Cmd.none
-                    )
+                            )
 
-        CalculateAllPathsFromAlicorn ->
-            case maybeModel of
-                Nothing ->
-                    ( Nothing, Cmd.none )
+                visitor contextes _ acc =
+                    case contextes of
+                        [] ->
+                            acc
 
-                Just model ->
-                    let
-                        from : List Graph.NodeId
-                        from =
-                            Graph.nodes model.graph
-                                |> List.filterMap
-                                    (\node ->
-                                        if node.label == "Alicorn" then
-                                            Just node.id
+                        last :: _ ->
+                            if
+                                String.toLower last.node.label
+                                    == String.toLower
+                                        (if String.isEmpty model.second then
+                                            "Alicorn"
 
-                                        else
-                                            Nothing
-                                    )
-
-                        visitor : Graph.BfsNodeVisitor String e (List ( String, ( Int, String ) ))
-                        visitor contexts distance acc =
-                            case contexts of
-                                [] ->
-                                    acc
-
-                                this :: _ ->
-                                    ( contexts
-                                        |> List.map (\{ node } -> node.label)
-                                        |> List.reverse
-                                        |> String.join " -> "
-                                    , ( distance, this.node.label )
-                                    )
-                                        :: acc
-
-                        ( chains, leftovers ) =
-                            Graph.guidedBfs
-                                Graph.alongOutgoingEdges
-                                visitor
-                                from
-                                []
-                                model.graph
-                    in
-                    ( Just
-                        { model
-                            | result =
-                                (chains
-                                    |> List.sortBy Tuple.second
-                                    |> List.map Tuple.first
-                                )
-                                    ++ "\nUnconnected:"
-                                    :: (leftovers
-                                            |> Graph.nodes
-                                            |> List.map .label
-                                       )
-                                    |> String.join "\n"
+                                         else
+                                            model.second
+                                        )
+                            then
+                                contextes
+                                    |> List.map (\{ node } -> node.label)
+                                    |> List.reverse
+                                    |> String.join " -> "
                                     |> Just
-                        }
-                    , Cmd.none
-                    )
+
+                            else
+                                acc
+            in
+            ( Just
+                { model
+                    | result =
+                        Graph.guidedBfs
+                            Graph.alongOutgoingEdges
+                            visitor
+                            from
+                            Nothing
+                            model.graph
+                            |> Tuple.first
+                }
+            , Cmd.none
+            )
+
+        ( CalculateAllPathsFromAlicorn, Just model ) ->
+            let
+                from : List Graph.NodeId
+                from =
+                    Graph.nodes model.graph
+                        |> List.filterMap
+                            (\node ->
+                                if node.label == "Alicorn" then
+                                    Just node.id
+
+                                else
+                                    Nothing
+                            )
+
+                visitor : Graph.BfsNodeVisitor String e ( List ( String, ( Int, String ) ), Int, Int )
+                visitor contexts distance ( acc, oldN, oldC ) =
+                    case contexts of
+                        [] ->
+                            ( acc, oldN, oldC )
+
+                        this :: _ ->
+                            ( ( contexts
+                                    |> List.map (\{ node } -> node.label)
+                                    |> List.reverse
+                                    |> String.join " -> "
+                              , ( distance, String.toLower this.node.label )
+                              )
+                                :: acc
+                            , oldN + distance
+                            , oldC + 1
+                            )
+
+                ( ( chains, n, c ), leftovers ) =
+                    Graph.guidedBfs
+                        Graph.alongOutgoingEdges
+                        visitor
+                        from
+                        ( [], 0, 0 )
+                        model.graph
+
+                average =
+                    toFloat n / toFloat c
+            in
+            ( Just
+                { model
+                    | result =
+                        (chains
+                            |> List.sortBy Tuple.second
+                            |> List.map Tuple.first
+                        )
+                            ++ ("\nAverage Alicorn number: "
+                                    ++ (round (average * 10) |> toFloat |> (\q -> q / 10) |> String.fromFloat)
+                                    ++ "\nUnconnected:"
+                               )
+                            :: (leftovers
+                                    |> Graph.nodes
+                                    |> List.map .label
+                               )
+                            |> String.join "\n"
+                            |> Just
+                }
+            , Cmd.none
+            )
+
+        ( GenerateDOTfile, Just model ) ->
+            ( maybeModel
+            , Graph.DOT.output Just (\_ -> Nothing) model.graph
+                |> File.Download.string "glowfic.dot" "text/plain"
+            )
 
 
 foldl2 : (a -> List b) -> (a -> b -> c -> c) -> c -> List a -> c
