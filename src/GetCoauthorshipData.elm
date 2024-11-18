@@ -1,4 +1,4 @@
-module GetCoauthorshipData exposing (run)
+module GetCoauthorshipData exposing (PostDetails, User, postDetailsDecoder, run)
 
 import BackendTask exposing (BackendTask)
 import CachedHttp
