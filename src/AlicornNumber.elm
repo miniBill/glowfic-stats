@@ -9,6 +9,7 @@ import File.Download
 import GetCoauthorshipData exposing (PostDetails)
 import Graph exposing (Edge, Graph, Node)
 import Graph.DOT
+import Graph.TGF
 import Http
 import Json.Decode
 import List.Extra
@@ -30,6 +31,7 @@ type Msg
     | CalculateShortestPath
     | CalculateAllPathsFromAlicorn
     | GenerateDOTfile
+    | GenerateTGFfile
 
 
 main : Program () Model Msg
@@ -98,6 +100,13 @@ view maybeModel =
                         { onPress = Just GenerateDOTfile
                         , label = text "Generate .dot file"
                         }
+                    , Input.button
+                        [ padding 8
+                        , Border.width 1
+                        ]
+                        { onPress = Just GenerateTGFfile
+                        , label = text "Generate .tgf file"
+                        }
                     ]
                 , case model.result of
                     Nothing ->
@@ -138,21 +147,25 @@ update msg maybeModel =
                                 )
                                 outerAuthorsAcc
                                 post.authors
-                            , foldl2
-                                (\( _, others ) -> List.Extra.select others)
-                                (\( firstAuthor, _ ) ( secondAuthor, _ ) innerLinksAcc ->
-                                    Dict.update
-                                        ( firstAuthor.id, secondAuthor.id )
-                                        (\existing ->
-                                            existing
-                                                |> Maybe.withDefault []
-                                                |> (::) post
-                                                |> Just
-                                        )
-                                        innerLinksAcc
-                                )
+                            , if List.length post.authors > 5 then
                                 outerLinksAcc
-                                (List.Extra.select post.authors)
+
+                              else
+                                foldl2
+                                    (\( _, others ) -> List.Extra.select others)
+                                    (\( firstAuthor, _ ) ( secondAuthor, _ ) innerLinksAcc ->
+                                        Dict.update
+                                            ( firstAuthor.id, secondAuthor.id )
+                                            (\existing ->
+                                                existing
+                                                    |> Maybe.withDefault []
+                                                    |> (::) post
+                                                    |> Just
+                                            )
+                                            innerLinksAcc
+                                    )
+                                    outerLinksAcc
+                                    (List.Extra.select post.authors)
                             )
                         )
                         ( Dict.empty, Dict.empty )
@@ -318,8 +331,16 @@ update msg maybeModel =
 
         ( GenerateDOTfile, Just model ) ->
             ( maybeModel
-            , Graph.DOT.output Just (\_ -> Nothing) model.graph
+            , model.graph
+                |> Graph.DOT.output Just (\_ -> Nothing)
                 |> File.Download.string "glowfic.dot" "text/plain"
+            )
+
+        ( GenerateTGFfile, Just model ) ->
+            ( maybeModel
+            , model.graph
+                |> Graph.TGF.output identity (\_ -> "")
+                |> File.Download.string "glowfic.tgf" "text/plain"
             )
 
 
