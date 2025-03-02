@@ -1,18 +1,19 @@
 module AlicornNumber exposing (main)
 
 import Browser
+import Codecs
 import Dict
 import Element exposing (Element, column, height, padding, paragraph, px, shrink, spacing, text, textColumn, wrappedRow)
 import Element.Border as Border
 import Element.Input as Input
 import File.Download
-import GetCoauthorshipData exposing (PostDetails)
 import Graph exposing (Edge, Graph, Node)
 import Graph.DOT
 import Graph.TGF
 import Http
 import Json.Decode
 import List.Extra
+import Types exposing (PostDetails)
 
 
 type alias Model =
@@ -27,7 +28,7 @@ type alias Model =
 type Msg
     = First String
     | Second String
-    | GotData (Result Http.Error (List GetCoauthorshipData.PostDetails))
+    | GotData (Result Http.Error (List PostDetails))
     | CalculateShortestPath
     | CalculateAllPathsFromAlicorn
     | GenerateDOTfile
@@ -49,7 +50,7 @@ init _ =
     ( Nothing
     , Http.get
         { url = "/alicorn.json"
-        , expect = Http.expectJson GotData (Json.Decode.list GetCoauthorshipData.postDetailsDecoder)
+        , expect = Http.expectJson GotData (Json.Decode.list Codecs.postDetailsDecoder)
         }
     )
 

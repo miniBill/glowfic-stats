@@ -15,6 +15,7 @@ import Sha256
 getJson : String -> Decoder data -> BackendTask FatalError data
 getJson url decoder =
     let
+        filename : String
         filename =
             toFilename url
     in
@@ -37,6 +38,7 @@ toFilename url =
 isCached : String -> BackendTask error Bool
 isCached url =
     let
+        filename : String
         filename =
             toFilename url
     in

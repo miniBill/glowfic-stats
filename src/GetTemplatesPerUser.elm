@@ -2,6 +2,7 @@ module GetTemplatesPerUser exposing (run)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
+import Codecs
 import Dict
 import Dict.Extra
 import FatalError exposing (FatalError)
@@ -9,6 +10,7 @@ import Json.Decode
 import Pages.Script as Script exposing (Script)
 import Pages.Script.Spinner as Spinner
 import Triple.Extra
+import Types exposing (Template, User)
 import Url.Builder
 import Utils
 
@@ -16,32 +18,6 @@ import Utils
 run : Script
 run =
     Script.withoutCliOptions task
-
-
-type alias Template =
-    { id : Int
-    , name : String
-    }
-
-
-templateDecoder : Json.Decode.Decoder Template
-templateDecoder =
-    Json.Decode.map2 Template
-        (Json.Decode.field "id" Json.Decode.int)
-        (Json.Decode.field "name" Json.Decode.string)
-
-
-type alias User =
-    { id : Int
-    , username : String
-    }
-
-
-userDecoder : Json.Decode.Decoder User
-userDecoder =
-    Json.Decode.map2 User
-        (Json.Decode.field "id" Json.Decode.int)
-        (Json.Decode.field "username" Json.Decode.string)
 
 
 task : BackendTask FatalError ()
@@ -59,7 +35,7 @@ task =
                                 ( Spinner.Succeed, Just ("Got " ++ String.fromInt (List.length users) ++ " users") )
                     )
             )
-            (\_ -> Utils.getAllPages [ "users" ] [] userDecoder)
+            (\_ -> Utils.getAllPages [ "users" ] [] Codecs.userDecoder)
         |> Spinner.withStepWithOptions
             (Spinner.options "Getting templates"
                 |> Spinner.withOnCompletion
@@ -77,7 +53,7 @@ task =
                     |> List.sortBy .id
                     |> List.map
                         (\user ->
-                            Do.do (Utils.getAllPages [ "templates" ] [ Url.Builder.int "user_id" user.id ] templateDecoder) <| \templates ->
+                            Do.do (Utils.getAllPages [ "templates" ] [ Url.Builder.int "user_id" user.id ] Codecs.templateDecoder) <| \templates ->
                             BackendTask.succeed (List.map (Tuple.pair user) templates)
                         )
                     |> BackendTask.sequence

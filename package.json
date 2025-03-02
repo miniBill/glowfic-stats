@@ -1,7 +1,7 @@
 {
     "license": "BSD-3-Clause",
     "devDependencies": {
-        "elm-pages": "^3.0.19"
+        "elm-pages": "^3.0.20"
     },
     "overrides": {
         "elm-doc-preview": ">=6.0.0",
