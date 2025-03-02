@@ -2,6 +2,8 @@ module MultiAuthorCharacters exposing (run)
 
 import BackendTask exposing (BackendTask)
 import Codecs
+import Dict
+import Dict.Extra
 import FatalError exposing (FatalError)
 import List.Extra
 import Pages.Script as Script exposing (Script)
@@ -57,10 +59,51 @@ task =
                                         )
                                     )
                         )
-                    |> List.Extra.greedyGroupsOf 1
-                    |> List.map BackendTask.combine
                     |> BackendTask.sequence
                     |> BackendTask.map List.concat
             )
+        |> Spinner.withStepWithOptions
+            (Spinner.options "Calculating overlap"
+                |> Spinner.withOnCompletion
+                    (\res ->
+                        case res of
+                            Err _ ->
+                                ( Spinner.Fail, Nothing )
+
+                            Ok _ ->
+                                ( Spinner.Succeed, Just "Calculated overlap" )
+                    )
+            )
+            (\characters ->
+                characters
+                    |> Dict.Extra.groupBy
+                        (\( _, { name } ) ->
+                            name
+                        )
+                    |> BackendTask.succeed
+            )
         |> Spinner.runSteps
-        |> BackendTask.map (\_ -> ())
+        |> BackendTask.andThen
+            (\overlaps ->
+                overlaps
+                    |> Dict.map
+                        (\_ group ->
+                            List.map (\( { username }, _ ) -> username) group
+                                |> List.Extra.unique
+                        )
+                    |> Dict.toList
+                    |> List.sortBy
+                        (\( _, group ) ->
+                            -(List.length group)
+                        )
+                    |> List.take 10
+                    |> List.map
+                        (\( name, group ) ->
+                            name
+                                ++ ": "
+                                ++ String.join ", " group
+                        )
+                    |> List.map (\line -> Script.log line)
+                    |> BackendTask.sequence
+                    |> BackendTask.map (\_ -> ())
+            )
