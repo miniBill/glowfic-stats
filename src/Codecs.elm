@@ -1,8 +1,8 @@
-module Codecs exposing (postDecoder, postDetailsDecoder, postDetailsEncoder, templateDecoder, userDecoder, userEncoder)
+module Codecs exposing (characterDecoder, postDecoder, postDetailsDecoder, postDetailsEncoder, templateDecoder, userDecoder, userEncoder)
 
 import Json.Decode
 import Json.Encode
-import Types exposing (Post, PostDetails, Template, User)
+import Types exposing (Character, Post, PostDetails, Template, User)
 
 
 userDecoder : Json.Decode.Decoder User
@@ -47,3 +47,10 @@ postDetailsDecoder =
     Json.Decode.map2 PostDetails
         (Json.Decode.field "id" Json.Decode.int)
         (Json.Decode.field "authors" (Json.Decode.list userDecoder))
+
+
+characterDecoder : Json.Decode.Decoder Character
+characterDecoder =
+    Json.Decode.map2 Character
+        (Json.Decode.field "id" Json.Decode.int)
+        (Json.Decode.field "name" Json.Decode.string)

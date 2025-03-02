@@ -1,4 +1,4 @@
-module Types exposing (Post, PostDetails, Template, User)
+module Types exposing (Character, Post, PostDetails, Template, User)
 
 
 type alias User =
@@ -22,4 +22,10 @@ type alias Post =
 type alias PostDetails =
     { id : Int
     , authors : List User
+    }
+
+
+type alias Character =
+    { id : Int
+    , name : String
     }
