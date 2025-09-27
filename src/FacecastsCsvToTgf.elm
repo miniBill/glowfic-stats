@@ -1,4 +1,4 @@
-module FacecastsCsvToDot exposing (run)
+module FacecastsCsvToTgf exposing (run)
 
 import BackendTask exposing (BackendTask)
 import BackendTask.Do as Do
@@ -8,7 +8,7 @@ import Dict.Extra
 import FastDict as Dict exposing (Dict)
 import FatalError exposing (FatalError)
 import Graph
-import Graph.DOT
+import Graph.TGF
 import Pages.Script as Script exposing (Script)
 import Set
 import Triple.Extra
@@ -89,7 +89,7 @@ task =
                 links
     in
     Graph.fromNodesAndEdges nodes edges
-        |> Graph.DOT.output Just Just
+        |> Graph.TGF.output identity identity
         |> Script.log
 
 
