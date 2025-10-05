@@ -1,0 +1,11 @@
+{
+    "targets": {
+        "Galaxy": {
+            "inputs": [
+                "src/Galaxy.elm"
+            ],
+            "output": "build/galaxy.js"
+        }
+    },
+    "serve": "."
+}
