@@ -23,7 +23,15 @@ getJson url decoder =
         |> BackendTask.allowFatal
         |> BackendTask.onError
             (\_ ->
-                Do.allowFatal (Http.get url Http.expectString) <| \raw ->
+                Do.do
+                    (Http.get url Http.expectString
+                        |> BackendTask.onError
+                            (\err ->
+                                Do.log (Debug.toString err.recoverable) <| \_ ->
+                                BackendTask.fail err.fatal
+                            )
+                    )
+                <| \raw ->
                 Do.do (Script.sleep 200) <| \_ ->
                 Do.allowFatal (Script.writeFile { path = filename ++ ".tmp", body = raw }) <| \_ ->
                 Do.command "mv" [ filename ++ ".tmp", filename ] <| \_ ->

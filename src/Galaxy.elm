@@ -117,7 +117,7 @@ spheres graph =
     let
         nodeCount : Int
         nodeCount =
-            min 20 (Graph.size graph)
+            min 12 (Graph.size graph)
     in
     Graph.nodes graph
         |> List.take nodeCount
